@@ -9,7 +9,8 @@ export default function IngredientsEditor({ ingredients, onSave, onCancel }) {
   };
 
   const removeIngredient = (index) => {
-    setItems(items.filter((_, i) => i !== index));
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
   };
 
   const updateIngredient = (index, field, value) => {
@@ -54,6 +55,7 @@ export default function IngredientsEditor({ ingredients, onSave, onCancel }) {
                 className="input input-sm input-bordered w-32 bg-base-100"
               />
               <button
+                type="button"
                 onClick={() => removeIngredient(index)}
                 className="btn btn-circle btn-sm btn-ghost opacity-0 group-hover:opacity-100 transition-opacity"
               >
