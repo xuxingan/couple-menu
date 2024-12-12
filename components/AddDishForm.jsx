@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { chatWithAIJson } from '../utils/aiClient';
+import IngredientsEditor from './IngredientsEditor';
 
 export default function AddDishForm({ side, onSuccess }) {
   const [name, setName] = useState('');
@@ -7,6 +9,9 @@ export default function AddDishForm({ side, onSuccess }) {
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState(false);
   const [cookingTime, setCookingTime] = useState(30);
+  const [ingredients, setIngredients] = useState([]);
+  const [showIngredientsEditor, setShowIngredientsEditor] = useState(false);
+  const [fetchingIngredients, setFetchingIngredients] = useState(false);
 
   const getTimeLabel = (minutes) => {
     if (minutes < 60) {
@@ -17,6 +22,33 @@ export default function AddDishForm({ side, onSuccess }) {
     return remainingMinutes ? 
       `${hours}小时${remainingMinutes}分` : 
       `${hours}小时`;
+  };
+
+  const fetchIngredients = async () => {
+    if (!name.trim()) {
+      alert('请先填写菜品名称');
+      return;
+    }
+
+    setFetchingIngredients(true);
+    try {
+      const systemPrompt = `你是一个专业的厨师助手。请根据用户提供的菜品名称，返回制作该菜品所需的食材清单。
+返回格式必须是一个包含 ingredients 数组的 JSON 对象，每个食材包含 name 和 quantity 字段。`;
+      
+      const result = await chatWithAIJson(
+        `帮我查询制作${name}所需的食材列表`,
+        systemPrompt,
+        { temperature: 0.7 }
+      );
+      
+      setIngredients(result.ingredients);
+      setShowIngredientsEditor(true);
+    } catch (error) {
+      console.error('获取食材列表失败:', error);
+      alert('获取食材列表失败，请重试');
+    } finally {
+      setFetchingIngredients(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -33,6 +65,7 @@ export default function AddDishForm({ side, onSuccess }) {
             image_url: image || null,
             created_by: side,
             cooking_time_minutes: cookingTime,
+            ingredients,
           }
         ]);
 
@@ -42,6 +75,7 @@ export default function AddDishForm({ side, onSuccess }) {
       setDescription('');
       setImage('');
       setCookingTime(30);
+      setIngredients([]);
       onSuccess?.();
       
     } catch (error) {
@@ -99,12 +133,71 @@ export default function AddDishForm({ side, onSuccess }) {
           onChange={(e) => setCookingTime(Number(e.target.value))}
           className="range range-primary" 
         />
-        <div className="w-full flex justify-between text-xs px-2 mt-2">
-          {[15, 30, 45, 60, 90, 120, 150, 180].map((minutes) => (
-            <span key={minutes}>{getTimeLabel(minutes)}</span>
-          ))}
-        </div>
       </div>
+      
+      <div className="form-control">
+        <div className="flex justify-between items-center">
+          <label className="label">
+            <span className="label-text">食材清单</span>
+          </label>
+          <div className="space-x-2">
+            {ingredients.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowIngredientsEditor(true)}
+                className="btn btn-sm btn-outline"
+              >
+                编辑食材
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={fetchIngredients}
+              disabled={fetchingIngredients || !name.trim()}
+              className="btn btn-sm btn-primary"
+            >
+              {fetchingIngredients ? '获取中...' : '获取食材'}
+            </button>
+          </div>
+        </div>
+        {ingredients.length > 0 && (
+          <div className="mt-2 p-4 bg-base-200 rounded-lg">
+            <div className="max-h-[160px] overflow-y-auto pr-2">
+              {ingredients.map((item, index) => (
+                <div 
+                  key={index} 
+                  className="text-sm py-1.5 border-b last:border-0 border-base-300 animate-fade-in"
+                >
+                  <span className="font-medium">{item.name}</span>
+                  <span className="text-base-content/60 ml-2">{item.quantity}</span>
+                </div>
+              ))}
+            </div>
+            {ingredients.length > 5 && (
+              <div className="text-xs text-base-content/50 text-center mt-2">
+                上下滚动查看更多
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showIngredientsEditor && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="card bg-base-100 shadow-lg w-full max-w-lg">
+            <div className="card-body">
+              <IngredientsEditor
+                ingredients={ingredients}
+                onSave={(newIngredients) => {
+                  setIngredients(newIngredients);
+                  setShowIngredientsEditor(false);
+                }}
+                onCancel={() => setShowIngredientsEditor(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       
       <button
         type="submit"

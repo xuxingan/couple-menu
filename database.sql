@@ -7,5 +7,6 @@ create table dishes (
   created_by text not null, -- 'male' 或 'female'
   created_at timestamp with time zone default timezone('utc'::text, now()),
   wished boolean default false,
-  cooking_time_minutes integer default 30
+  cooking_time_minutes integer default 30,
+  ingredients JSONB
 ); 
