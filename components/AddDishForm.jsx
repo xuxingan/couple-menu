@@ -6,6 +6,18 @@ export default function AddDishForm({ side, onSuccess }) {
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cookingTime, setCookingTime] = useState(30);
+
+  const getTimeLabel = (minutes) => {
+    if (minutes < 60) {
+      return `${minutes}分钟`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes ? 
+      `${hours}小时${remainingMinutes}分` : 
+      `${hours}小时`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +32,7 @@ export default function AddDishForm({ side, onSuccess }) {
             description,
             image_url: image || null,
             created_by: side,
+            cooking_time_minutes: cookingTime,
           }
         ]);
 
@@ -28,6 +41,7 @@ export default function AddDishForm({ side, onSuccess }) {
       setName('');
       setDescription('');
       setImage('');
+      setCookingTime(30);
       onSuccess?.();
       
     } catch (error) {
@@ -69,6 +83,27 @@ export default function AddDishForm({ side, onSuccess }) {
           className="textarea textarea-bordered"
           rows="2"
         />
+      </div>
+      
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text">烹饪时间</span>
+          <span className="label-text-alt">{getTimeLabel(cookingTime)}</span>
+        </label>
+        <input 
+          type="range" 
+          min={15} 
+          max={180} 
+          step={15}
+          value={cookingTime}
+          onChange={(e) => setCookingTime(Number(e.target.value))}
+          className="range range-primary" 
+        />
+        <div className="w-full flex justify-between text-xs px-2 mt-2">
+          {[15, 30, 45, 60, 90, 120, 150, 180].map((minutes) => (
+            <span key={minutes}>{getTimeLabel(minutes)}</span>
+          ))}
+        </div>
       </div>
       
       <button

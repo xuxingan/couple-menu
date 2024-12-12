@@ -6,6 +6,18 @@ export default function EditDishForm({ dish, onSuccess, onCancel }) {
   const [description, setDescription] = useState(dish.description || '');
   const [image, setImage] = useState(dish.image_url || '');
   const [loading, setLoading] = useState(false);
+  const [cookingTime, setCookingTime] = useState(dish.cooking_time_minutes || 30);
+
+  const getTimeLabel = (minutes) => {
+    if (minutes < 60) {
+      return `${minutes}分钟`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes ? 
+      `${hours}小时${remainingMinutes}分` : 
+      `${hours}小时`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,6 +30,7 @@ export default function EditDishForm({ dish, onSuccess, onCancel }) {
           name,
           description,
           image_url: image || null,
+          cooking_time_minutes: cookingTime,
         })
         .eq('id', dish.id);
 
@@ -64,6 +77,27 @@ export default function EditDishForm({ dish, onSuccess, onCancel }) {
           className="textarea textarea-bordered"
           rows="2"
         />
+      </div>
+      
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text">烹饪时间</span>
+          <span className="label-text-alt">{getTimeLabel(cookingTime)}</span>
+        </label>
+        <input 
+          type="range" 
+          min={15} 
+          max={180} 
+          step={15}
+          value={cookingTime}
+          onChange={(e) => setCookingTime(Number(e.target.value))}
+          className="range range-primary" 
+        />
+        <div className="w-full flex justify-between text-xs px-2 mt-2">
+          {[15, 30, 45, 60, 90, 120, 150, 180].map((minutes) => (
+            <span key={minutes}>{getTimeLabel(minutes)}</span>
+          ))}
+        </div>
       </div>
       
       <div className="flex gap-4">

@@ -6,5 +6,6 @@ create table dishes (
   image_url text,
   created_by text not null, -- 'male' 或 'female'
   created_at timestamp with time zone default timezone('utc'::text, now()),
-  wished boolean default false
+  wished boolean default false,
+  cooking_time_minutes integer default 30
 ); 

@@ -157,6 +157,13 @@ export default function DishList({ side, isCurrentUser }) {
                   transform group-hover:-translate-y-1 transition-all duration-300
                   ${dish.wished ? 'animate-pulse' : ''}`}>
                   {dish.name}
+                  {dish.cooking_time_minutes && (
+                    <span className="ml-2 text-sm font-normal">
+                      {dish.cooking_time_minutes < 60 
+                        ? `${dish.cooking_time_minutes}分钟` 
+                        : `${Math.floor(dish.cooking_time_minutes/60)}小时${dish.cooking_time_minutes%60 ? dish.cooking_time_minutes%60+'分' : ''}`}
+                    </span>
+                  )}
                   {dish.wished && (
                     <span className="ml-2 text-sm animate-bounce inline-block">
                       ✨ 期待被投喂
