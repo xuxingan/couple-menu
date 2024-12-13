@@ -13,6 +13,9 @@ export default function MainLayout({ userSide }) {
   const [editableShoppingList, setEditableShoppingList] = useState(null);
   const [hasGeneratedList, setHasGeneratedList] = useState(false);
   const [currentShoppingListId, setCurrentShoppingListId] = useState(null);
+  const [showCard, setShowCard] = useState(false);
+  const [cardImage, setCardImage] = useState(null);
+  const [generatingCard, setGeneratingCard] = useState(false);
 
   // 获取所有被标记为"求投喂"的菜品
   const fetchWishedDishes = async () => {
@@ -219,6 +222,116 @@ ${allIngredients.join('\n')}
     setShowShoppingList(false);
   };
 
+  // 添加生成卡片的函数
+  const generateCard = async () => {
+    setGeneratingCard(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 800;
+      canvas.height = 1200;
+      
+      // 设置背景 - 使用项目的紫色主题
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#2a1b3d');  // 深紫色
+      gradient.addColorStop(1, '#1a1625');  // 更深的紫色
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 添加发光效果
+      ctx.shadowColor = '#fb7299';  // bili-pink
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // 绘制卡片边框
+      ctx.strokeStyle = '#fb7299';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      // 绘制标题
+      ctx.font = 'bold 48px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText('采买清单', canvas.width / 2, 100);
+
+      // 计算总烹饪时间
+      const totalMinutes = wishedDishes.reduce((total, dish) => 
+        total + (dish.cooking_time_minutes || 0), 0);
+      
+      // 转换时间格式
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      const timeStr = hours > 0 
+        ? `预计烹饪时间：${hours}小时${minutes ? minutes + '分钟' : ''}`
+        : `预计烹饪时间：${minutes}分钟`;
+
+      // 绘制小标题
+      ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = '#fb7299';  // bili-pink
+      ctx.textAlign = 'center';
+      ctx.fillText(timeStr, canvas.width / 2, 150);
+
+      // 重置阴影效果
+      ctx.shadowBlur = 0;
+
+      // 绘制内容（从更低的位置开始，给小标题留出空间）
+      let y = 200;  // 从 180 改为 200
+      editableShoppingList.groups.forEach(group => {
+        // 绘制分类标题
+        ctx.font = 'bold 36px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = '#fb7299';  // bili-pink
+        ctx.textAlign = 'left';
+        ctx.fillText(`【${group.category}】`, 60, y);
+        y += 50;
+
+        // 绘制食材列表
+        ctx.font = '28px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        group.ingredients.forEach(item => {
+          // 绘制食材名称和数量
+          const text = `${item.name} ${item.quantity}`;
+          ctx.fillText(text, 80, y);
+          y += 40;
+        });
+        y += 20;
+      });
+
+      // 获取当前日期并格式化
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '.');
+
+      // 添加底部装饰和日期（添加发光效果）
+      ctx.shadowColor = '#fb7299';  // bili-pink
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = '#fb7299';
+      ctx.textAlign = 'center';
+      
+      // 绘制装饰文字
+      ctx.fillText('❤ 情侣菜单 ❤', canvas.width / 2, canvas.height - 80);
+      
+      // 绘制日期
+      ctx.fillText(dateStr, canvas.width / 2, canvas.height - 40);
+
+      const imageUrl = canvas.toDataURL('image/png');
+      setCardImage(imageUrl);
+      setShowCard(true);
+    } catch (error) {
+      console.error('生成卡片失败:', error);
+      alert('生成卡片失败，请重试');
+    } finally {
+      setGeneratingCard(false);
+    }
+  };
+
   useEffect(() => {
     fetchWishedDishes();
     
@@ -243,7 +356,7 @@ ${allIngredients.join('\n')}
       try {
         const existingList = await fetchShoppingList(wishedDishes);
         if (existingList) {
-          // 如果找到匹配的清单，更新状态
+          // 如果找���匹配的清单，更新状态
           setShoppingList(existingList.content);
           setEditableShoppingList(existingList.content);
           setCurrentShoppingListId(existingList.id);
@@ -448,6 +561,22 @@ ${allIngredients.join('\n')}
                   
                   <div className="pt-4 mt-4 border-t border-base-300 flex justify-end gap-2 bg-base-100">
                     <button
+                      onClick={generateCard}
+                      disabled={generatingCard}
+                      className="btn btn-ghost"
+                    >
+                      {generatingCard ? (
+                        <span className="loading loading-spinner loading-sm"></span>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                          </svg>
+                          生成卡片
+                        </>
+                      )}
+                    </button>
+                    <button
                       onClick={cancelEditing}
                       className="btn btn-ghost"
                     >
@@ -484,6 +613,48 @@ ${allIngredients.join('\n')}
           </div>
         </button>
       </div>
+
+      {/* 添加卡片预览弹窗 */}
+      <AnimatePresence>
+        {showCard && cardImage && (
+          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-base-100 rounded-lg shadow-xl w-full max-w-xl"
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold">采买清单卡片</h3>
+                  <button 
+                    onClick={() => setShowCard(false)}
+                    className="btn btn-circle btn-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="rounded-lg overflow-hidden mb-6">
+                  <img src={cardImage} alt="采买清单卡片" className="w-full" />
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <a
+                    href={cardImage}
+                    download="shopping-list-card.png"
+                    className="btn btn-primary"
+                  >
+                    下载图片
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 } 
