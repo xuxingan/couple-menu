@@ -3,7 +3,7 @@ import { supabase } from '../utils/supabaseClient';
 import AddDishForm from './AddDishForm';
 import EditDishForm from './EditDishForm';
 
-export default function DishList({ side, isCurrentUser }) {
+export default function DishList({ side, isCurrentUser, onWishUpdate }) {
   const [dishes, setDishes] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingDish, setEditingDish] = useState(null);
@@ -28,19 +28,36 @@ export default function DishList({ side, isCurrentUser }) {
     setDishes(data);
   };
 
-  const toggleWish = async (dishId, currentWished) => {
+  const handleWishToggle = async (dish) => {
+    const newWishedState = !dish.wished;
+    
     const { error } = await supabase
       .from('dishes')
-      .update({ wished: !currentWished })
-      .eq('id', dishId);
+      .update({ wished: newWishedState })
+      .eq('id', dish.id);
 
-    if (error) {
-      console.error('Error:', error);
-      return;
+    if (!error) {
+      onWishUpdate(dish.id, newWishedState);
+      
+      // 更新本地状态并保持排序
+      setDishes(prev => {
+        const updatedDishes = prev.map(d => 
+          d.id === dish.id 
+            ? { ...d, wished: newWishedState }
+            : d
+        );
+        
+        // 按照wished状态和创建时间排序
+        return updatedDishes.sort((a, b) => {
+          // 首先按照wished状态排序
+          if (a.wished !== b.wished) {
+            return b.wished - a.wished; // wished为true的排在前面
+          }
+          // 其次按照创建时间排序
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+      });
     }
-
-    // 更新本地状态
-    fetchDishes();
   };
 
   const handleDishClick = (dish) => {
@@ -181,7 +198,7 @@ export default function DishList({ side, isCurrentUser }) {
                   <div className="pt-4 transform translate-y-4 opacity-0 
                     group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                     <button 
-                      onClick={() => toggleWish(dish.id, dish.wished)}
+                      onClick={() => handleWishToggle(dish)}
                       className={`btn btn-sm ${
                         side === 'male' 
                           ? 'btn-primary animate-pulse hover:animate-none' 
